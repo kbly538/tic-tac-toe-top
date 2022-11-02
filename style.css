@@ -1,4 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Merienda+One&display=swap');
+
 .appContainer {
+    font-family: 'Merienda One', cursive;
     width: 100vw;
     height: 100vh;
     display: flex;
@@ -15,8 +18,12 @@
 }
 
 
-.gameboardContainer div {
+.gameboardContainer .gridcell {
     width: 200px;
     height: 200px;
-    background-color: rgb(176, 119, 119);
+    border: 2px solid black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6rem;
 }
