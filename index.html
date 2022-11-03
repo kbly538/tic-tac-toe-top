@@ -11,17 +11,34 @@
 </head>
 <body>
     <div class="appContainer">
-        
-        <div class="gameboardContainer">
-            <div id="00" class="gridcell"></div>
-            <div id="01" class="gridcell"></div>
-            <div id="02" class="gridcell"></div>
-            <div id="10" class="gridcell"></div>
-            <div id="11" class="gridcell"></div>
-            <div id="12" class="gridcell"></div>
-            <div id="20" class="gridcell"></div>
-            <div id="21" class="gridcell"></div>
-            <div id="22" class="gridcell"></div>
+
+        <div class="gameContainer">
+            <form action="" class="playerform" id="playerform">
+                <label for="player1"> Player 1:
+                    <input type="text" name="player1" id="player1" required>
+                </label>
+                <label for="player2"> Player 2:
+                    <input type="text" name="player2" id="player2" required>
+                </label>
+                
+                <button id ="formsubmit">Start Game</button>
+            </form>
+            
+            <div id="game-info" class="inactive" ></div>
+            <div id="turn-info" class="inactive"></div>
+
+
+            <div class="gameboardContainer inactive">
+                <div id="00" class="gridcell"></div>
+                <div id="01" class="gridcell"></div>
+                <div id="02" class="gridcell"></div>
+                <div id="10" class="gridcell"></div>
+                <div id="11" class="gridcell"></div>
+                <div id="12" class="gridcell"></div>
+                <div id="20" class="gridcell"></div>
+                <div id="21" class="gridcell"></div>
+                <div id="22" class="gridcell"></div>
+            </div>
         </div>
     </div>
 </body>
