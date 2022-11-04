@@ -76,3 +76,12 @@ input {
 button {
     font-size: 64px;
 }
+
+#title {
+    font-size: 80px;
+    text-align: center;
+}
+
+#turn-info {
+    font-size: 64px;
+}
