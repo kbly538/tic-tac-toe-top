@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -9,24 +10,33 @@
     <link rel="stylesheet" href="resetstyle.css">
     <script src="script.js" defer></script>
 </head>
+
 <body>
     <div class="appContainer">
-
+        <div class="result-screen inactive-result-screen">
+            <p id="result-text"></p>
+            <div class="result-button-group">
+                <button id="play-again-btn">Play Again</button>
+                <button id="restart-game-btn">Restart Game</button>
+            </div>
+        </div>
         <div class="gameContainer">
             <h1 id="title">TIC TAC TOE</h1>
             <form action="" class="playerform" id="playerform">
                 <label for="player1"> Player 1:
-                    <input type="text" name="player1" id="player1" required>
+                    <input type="text" name="player1" id="player1" value="hilal" maxlength="15" required>
                 </label>
                 <label for="player2"> Player 2:
-                    <input type="text" name="player2" id="player2" required>
+                    <input type="text" name="player2" id="player2" value="kubilay" maxlength="15" required>
                 </label>
-                
-                <button id ="formsubmit">Start Game</button>
+
+                <button id="formsubmit">Start Game</button>
             </form>
-            
-            <div id="game-info" class="inactive" ></div>
-            <div id="turn-info" class="inactive"></div>
+
+            <div class="current-game-details">
+                <div id="game-info" class="inactive"></div>
+                <div id="turn-info" class="inactive"></div>
+            </div>
 
 
             <div class="gameboardContainer inactive">
@@ -41,6 +51,9 @@
                 <div id="22" class="gridcell"></div>
             </div>
         </div>
+
+
     </div>
 </body>
+
 </html>
