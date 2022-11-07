@@ -52,10 +52,19 @@
 .playerform {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 34px;
     align-items: center;
     font-size: 64px;
 }
+
+#option-player2{
+    font-size: 64px;
+}
+
+select {
+    padding: 10px;
+}
+
 
 .current-game-details {
     display: flex;

@@ -1,11 +1,11 @@
 function PlayerFactory(name, playerNo) {
-    return { name, playerNo };
+    return { name, playerNo, stats: {win: 0, lose: 0, tie: 0, badMoves: 0, fastestWin: 0} };
 }
 
 const Gameboard = (function (doc) {
-    // CELL ARRAY
-    let _gridRows = 3;
-    let _gridCols = 3;
+    // GRID DETAILS
+    const GRID_ROW_COUNT = 3;
+    const GRID_COL_COUNT = 3;
     let _grid = ['', '', '', '', '', '', '', '', ''];
     let activeCell = '';
 
@@ -14,24 +14,54 @@ const Gameboard = (function (doc) {
 
     const setActiveCell = (ix) => activeCell = ix;
     const getActiveCell = () => activeCell;
-    const emptyActiveCell = () => activeCell = '';
-    const getGameboard = () => _grid.slice();
+    const clearActiveCell = () => activeCell = '';
+    const getGameboard = () => [..._grid];
     const setGameboard = (grid) => _grid = grid;
     const updateGameboard = (ix, mark) => _grid[ix] = mark;
-
-    const getRows = () => _gridRows;
-    const getCols = () => _gridCols;
-
-    const removeAttachedEventListeners = ()=>{
-        // Remove event listeners
-        const clonedGameboard = gameboardContainer.cloneNode(true);
-        gameboardContainer.parentNode.replaceChild(clonedGameboard, gameboardContainer);
-        return;
+    const isEmptyCell = () => getGameboard()[getActiveCell()] === '';
+    const getRows = () => GRID_ROW_COUNT;
+    const getCols = () => GRID_COL_COUNT;
+    const getIndexFromClick = (clickedCell) => {
+        const coords = clickedCell.split('');
+        cellIndex = Number(coords[0]) * 3 + Number(coords[1])
+        return cellIndex;
     }
-    
 
-    return { getGameboard, setGameboard, getRows, getCols, updateGameboard, setActiveCell, getActiveCell, emptyActiveCell, removeAttachedEventListeners};
-})();
+    const resetGrid = () => {
+        for (let [index, cell] of _grid.entries()){
+            updateGameboard(index, '');
+        }
+    };
+
+
+    const resetGameboard = () => {
+        setActiveCell('');
+        resetGrid();
+        
+    }
+
+    const removeAttachedEventListeners = () => {
+
+        let gridCell = Array.from(gameboardContainer.childNodes).map(child => child)
+        gridCell.forEach(cell =>  {
+            let newCell = cell.cloneNode(true);
+            gameboardContainer.replaceChild(newCell, cell)
+        })
+    }
+
+    return {  // GAMEBOARD METHODS
+        getGameboard,
+        setGameboard,
+        getIndexFromClick,
+        isEmptyCell,
+        getRows, getCols,
+        updateGameboard,
+        setActiveCell,
+        getActiveCell,
+        removeAttachedEventListeners,
+        resetGameboard
+    };
+})(document);
 
 const DisplayController = (function (doc) {
 
@@ -46,112 +76,315 @@ const DisplayController = (function (doc) {
     const turnInfo = doc.getElementById('turn-info');
     const resultScreen = doc.querySelector('.result-screen');
     const resultText = doc.getElementById('result-text');
+    const playerForm = document.getElementById('playerform');
+    const gameboard = document.querySelector('.gameboardContainer');
+    const player2Option = document.getElementById('option-player2')
 
-    const updateGameboardDisplay = () => {
 
-        let currentGameboard = Gameboard.getGameboard();
+    const updateGameboardDisplay = () => drawGameboard();
 
-        // draw gameboard
+    const drawGameboard = () => {
+        let currentgameboard = Gameboard.getGameboard();
+        let rowCount = Gameboard.getRows();
+        let colCount = Gameboard.getCols();
+
         if (!!doc && 'querySelector' in doc) {
-            let targetCell; 
-            for (let row = 0; row < Gameboard.getRows(); row++) {
-                for (let col = 0; col < Gameboard.getCols(); col++) {
+            let targetCell;
+            for (let row = 0; row < rowCount; row++) {
+                for (let col = 0; col < colCount; col++) {
                     targetCell = doc.getElementById(`${row}${col}`)
-                    targetCell.textContent = currentGameboard[row * 3 + col];
+                    targetCell.textContent = currentgameboard[row * 3 + col];
                 }
             }
         }
+    }
 
-        activeCurrentGameDetails();
-
-    };
-
-    const activeCurrentGameDetails = ()=>{
+    const activateGameDetails = () => {
         gameInfo.classList.remove('inactive');
         turnInfo.classList.remove('inactive');
     }
 
-
-
-    const setGameInfo = (player1, player2) => {
-        gameInfo.textContent = `${player1.name} VS ${player2.name}`;
+    const setupGameDisplay = () => {
+        playerForm.classList.add('inactive');
+        gameboard.classList.remove('inactive');
+        player2Option.remove();
     }
-    const setTurnInfo = (player, tie, winner) => {
-        if (tie) {
-            setResultScreen();
-            return;
-        }
-        
-        if (winner) {
-            setResultScreen(winner.name);
-            return;
-        }
+
+    const setGameInfo = (player1, player2) => gameInfo.textContent = `${player1.name} VS ${player2.name}`;
+
+    const updateTurnDisplay = (player) => {
 
         turnInfo.textContent = `${player.name}'s turn`;
 
-        if (player.playerNo === 1){
-          turnInfo.style.color = player1Color;
-        } else {
-            turnInfo.style.color = player2Color;
-        }
+        if (player.playerNo === 1) turnInfo.style.color = player1Color;
+        else turnInfo.style.color = player2Color;
+
     }
 
-    const setResultScreen = (winner) =>{
-        resultScreen.classList.remove('inactive-result-screen');
-        resultScreen.classList.add('active-result-screen');
-        
-        if (!winner){
-            resultText.textContent = `IT'S A TIE`.toUpperCase();
+    const updateResultDisplay = (result) => result ? setResultScreen(result.name) : setResultScreen();
+
+
+    const setResultScreen = (winner) => {
+
+        toggleResultScreen();
+
+        if (!winner) return resultText.textContent = `IT'S A TIE`.toUpperCase();
+        else resultText.textContent = `${winner} wins this round.`.toUpperCase();
+    }
+
+    const toggleResultScreen = () => {
+        let resultScreenClassList = Array.from(resultScreen.classList);
+        if (resultScreenClassList.includes("inactive-result-screen")){
+            resultScreen.classList.remove('inactive-result-screen');
+            resultScreen.classList.add('active-result-screen');
             return;
         }
 
-        resultText.textContent = `${winner} wins this round.`.toUpperCase();
+        resultScreen.classList.add('inactive-result-screen');
+        resultScreen.classList.remove('active-result-screen');
     }
 
-    return { updateGameboardDisplay, setGameInfo, setTurnInfo }
+
+    return { updateGameboardDisplay, setGameInfo, updateTurnDisplay, activateGameDetails, setupGameDisplay, updateResultDisplay, toggleResultScreen }
 })(document);
 
 const GameEngine = (board, display) => {
-
-    let gameState = { STARTED: 1, FINISHED: 0, NOT_STARTED: -1 } // -1: Has not started 0: Finished 1: Playing  
-
-    let player1;
-    let player2;
-    let turn = player1;
-    let totalTurns = 0;
-    let currentGameState = gameState.NOT_STARTED;
-    let result = null;
-    let againstAI = true;
-
     // Cache DOM
     const cells = document.getElementsByClassName('gridcell');
     const player1input = document.getElementById('player1');
     const player2input = document.getElementById('player2');
-    const playerForm = document.getElementById('playerform');
-    const gameboard = document.querySelector('.gameboardContainer');
     const startGameButton = document.getElementById('formsubmit');
-    
+    const player2Option = document.getElementById('option-player2')
+    const player2label = document.getElementById('lbl-player2');
+    const resultRestartButton = document.getElementById('restart-game-btn');
+    const resultPlayAgainButton = document.getElementById('play-again-btn');
 
-    const setGameState = (state)=>{
-        currentGameState = state;
+
+
+    // GAME STATUS
+    const gameState = { STARTED: 1, FINISHED: 0, NOT_STARTED: -1 } // -1: Has not started 0: Finished 1: Playing  
+    let player1 = null;
+    let player2 = null;
+    let turn = player1;
+    let totalTurns = 0;
+    let currentGameState = gameState.NOT_STARTED;
+    let result = null;
+    let againstAI = false;
+
+
+    const resetGameStatus = () => {
+        turn = player1;
+        totalTurns = 0;
+        currentGameState = gameState.FINISHED;
+        result = null;
+    }
+
+
+    const setGameState = (state) => currentGameState = state;
+
+
+    // INGAME EVENTS
+    const processPlayerMove = (againstAI = false) => {
+
+        if (currentGameState === gameState.NOT_STARTED ||
+            currentGameState === gameState.FINISHED) {
+            return;
+        }
+        if (againstAI) {
+            if (placeMark('X') === true) {
+                turn = player2;
+                result = checkWinner('X');
+                if (!result) result = checkForTie();
+                if (!result && currentGameState === gameState.STARTED) {
+                    result = aiMove();
+                }
+            }
+        } else {
+            if (turn === player1 && placeMark('X') === true) {
+                turn = player2;
+                result = checkWinner('X');
+            } else if (turn === player2 && placeMark('O') === true) {
+                turn = player1;
+                result = checkWinner('O');
+            }
+        }
+
+
+        display.updateTurnDisplay(turn, null, null)
+
+
+        if (gameFinished()) {
+            display.updateResultDisplay(result)
+            setGameState(gameState.FINISHED);
+            return;
+        }
+
+    }
+    const processCellClick = (e) => {
+
+        // GET AND SET ACTIVATED CELL
+        let cell = e.target;
+        let cellIndex = board.getIndexFromClick(cell.id);
+        board.setActiveCell(cellIndex)
+
+        if (!board.isEmptyCell()) return;
+
+        processPlayerMove(againstAI);
+    }
+    const placeMark = (mark) => {
+        const activeCell = board.getActiveCell();
+        const gameboard = board.getGameboard();
+
+        if (gameboard[activeCell] !== '') return false;
+
+        board.updateGameboard(activeCell, mark);
+
+        display.updateGameboardDisplay();
+
+        totalTurns++;
+        return true;
+    }
+    // GAME FLOW
+    const getPlayersFromInput = () => {
+
+        if (currentGameState ===  gameState.FINISHED) {
+            setupGame();
+            return;
+        }
+        // IS GAME AGAINST AI?
+        againstAI = player2Option.value === 'ai';
+        setPlayers(player1input.value, againstAI ? 'AI' : player2input.value);
+
+        let playersValid = validatePlayers(player1, player2);
+
+
+        if (!playersValid) {
+            alertUser('Players must have names.')
+            return;
+        }
+
+        setupGame();
+
+    }
+    const setPlayers = (p1Name, p2Name) => {
+        player1 = PlayerFactory(p1Name, 1);
+        player2 = PlayerFactory(p2Name, 2);
+    }
+    const setupGame = () => {
+        turn = player1;
+        setGameState(gameState.STARTED);
+
+    }
+    const startGame = (e) => {
+
+        e.preventDefault()
+
+        getPlayersFromInput();
+
+        if (currentGameState !== gameState.STARTED) return;
+
+        display.setupGameDisplay();
+        display.setGameInfo(player1, player2);
+        display.updateTurnDisplay(turn);
+        display.activateGameDetails();
+        DisplayController.updateGameboardDisplay(document);
+        
+    }
+
+    const updatePlayerStats = (player) => {
+        player.stats.win++;
+        player.stats.fastestWin = player.stats.fastestWin < totalTurns ? player.stats.fastestWin : totalTurns;
+    }
+
+
+    const gameFinished = () => {
+        if (result) {
+            board.removeAttachedEventListeners()
+            return true;
+        }
+
+        if (checkForTie() === true) {
+            board.removeAttachedEventListeners()
+            return true;
+        };
+
+        return false;
+    }
+    const checkForTie = () => totalTurns === 9 && !result;
+    const checkWinner = (mark) => {
+
+        let winner = null;
+
+        // GET UP TO DATE BOARD STATUS
+        let size = board.getCols();
+        let grid = board.getGameboard();
+
+
+        // CHECK BOARD FOR WINNER 
+        let leftDiagonalConsecutiveMarkCount = 0;
+        let rightDiagonalConsecutiveMarkCount = 0;
+
+        for (let i = 0; i < 3; i++) {
+            let consecutiveRowMarkCount = 0;
+            let consecutiveColMarkCount = 0;
+
+            for (let j = 0; j < size; j++) {
+                if (grid[i * size + j] === mark) consecutiveRowMarkCount++;
+                if (grid[j * size + i] === mark) consecutiveColMarkCount++;
+                if (i === j && grid[i * size + j] === mark) leftDiagonalConsecutiveMarkCount++
+                if (i === (size - 1) - j && grid[i * size + j] === mark) rightDiagonalConsecutiveMarkCount++;
+            }
+
+            if (consecutiveRowMarkCount === size
+                || consecutiveColMarkCount === size
+                || leftDiagonalConsecutiveMarkCount === size
+                || rightDiagonalConsecutiveMarkCount === size) {
+
+                // return winner
+                winner = getPlayerFromMark(mark);
+                updatePlayerStats(winner);
+                currentGameState = gameState.FINISHED;
+                return winner;
+            }
+
+        }
+
+        // CHECK FOR TIE
+        if (totalTurns === 9 && !winner) return null;
+
+        return null;
+    }
+    const continueGameWithCurrentSettings = (e) => {
+        
+
+        resetGameStatus();
+        board.resetGameboard();
+        display.toggleResultScreen();
+        listenForCellEvents();
+        startGame(e);
+
+        
     }
 
     // AI
     const aiMove = () => {
 
+        display.updateTurnDisplay(turn);
 
-        if (currentGameState === gameState.NOT_STARTED || 
-            currentGameState === gameState.FINISHED){
+        if (currentGameState === gameState.NOT_STARTED ||
+            currentGameState === gameState.FINISHED) {
             return;
         }
 
         let randomMove = Math.round(Math.random() * 8)
         const gameboard = board.getGameboard();
+        
 
         while (gameboard[randomMove] !== '') {
             randomMove = Math.round(Math.random() * 8);
-            console.log(board.getGameboard())
+            
         }
+
         totalTurns++;
 
         board.setActiveCell(randomMove);
@@ -166,220 +399,44 @@ const GameEngine = (board, display) => {
 
         return result;
     }
+    // UTILITY
+    const getPlayerFromMark = (mark) => mark === 'X' ? player1 : mark === 'O' ? player2 : null;
+    const alertUser = (message) => alert(message);
+    const validatePlayers = (p1, p2) => p1.name !== "" && p2.name !== ""
 
-
-    // Register cells for event listening
-    const processPlayerMove = (againstAI = false) => {
-
-        console.log(board.getGameboard())
-
-        if (currentGameState === gameState.NOT_STARTED || 
-            currentGameState === gameState.FINISHED){
-            return;
-        }
-
-        if (againstAI){
-            if (placeMark('X') === true) {
-                turn = player2;
-                result = checkWinner('X');
-                if (!result && currentGameState === gameState.STARTED){
-                    result = aiMove();
-                }
-            }
-        } else {
-            if (turn === player1 && placeMark('X') === true) {
-                turn = player2;
-                result = checkWinner('X');
-                console.log(turn)
-            } else if (turn === player2 && placeMark('O') === true) {
-                
-                turn = player1;
-                result = checkWinner('O');
-            }
-        }
-        
-        display.setTurnInfo(turn, null, null)
-
-        let gameStatus = checkGameStatus();
-
-        if (gameStatus){
-            setGameState(gameState.FINISHED);
-            return;
-        }
-
-    }
-
-    const checkGameStatus = ()=>{
-        if (result) {
-            board.removeAttachedEventListeners()
-            
-            return true;
-        }
-
-        if (checkForTie() === true) {
-            display.setTurnInfo(null, true, null)
-            board.removeAttachedEventListeners()
-            return true;
-        };
-
-        return false;
-    }
-
-    const processCellClick = (e) => {
-        let cell = e.target;
-        let cellIndex = getIndexFromClick(cell.id); 
-        board.setActiveCell(cellIndex)
-        if (!isEmptyCell) return;
-        processPlayerMove(againstAI);
-    }
-
-
+    // EVENT LISTENERS
     
-
-
     const listenForCellEvents = () => {
+
+        // DETECT AND PROCESS CELL CLICKS
         Array.from(cells).forEach(cell => {
             cell.addEventListener('click', processCellClick, false)
         })
     }
-
     const listenForGameEvents = () => {
+
+
+        // START GAME
         startGameButton.addEventListener('click', startGame);
-    }
-
-
-    const setPlayers = (p1, p2) => {
-        player1 = PlayerFactory(p1, 1);
-        player2 = PlayerFactory(p2, 2);
-
-    }
-
-    const validatePlayers = (p1, p2) => {
-        if (player1.name === "" || player2.name === "") {
-            alert("Players must have names.")
-            setGameState(gameState.NOT_STARTED);
-            return;
-        }
-        setGameState(gameState.STARTED);
-    }
 
 
 
+        // OPPONENT SELECTION
+        player2Option.addEventListener('change', () => {
 
-    const placeMark = (mark) => {
-        const activeCell = board.getActiveCell();
-        const gameboard = board.getGameboard();
+            if (player2Option.value === "human") return player2label.style.display = "flex";
 
-        if (gameboard[activeCell] !== '') return false;
+            player2label.style.display = "none"
 
-        board.updateGameboard(activeCell, mark);
+        })
 
-        display.updateGameboardDisplay();
+        // RESULT SCREEN ACTIONS
+        resultPlayAgainButton.addEventListener('click', continueGameWithCurrentSettings)
+        resultRestartButton.addEventListener('click', () => location.reload())
 
-        totalTurns++;
-        return true;
-    }
 
-    const determineWinner = (mark, player1, player2) => {
-       
-        setGameState(gameState.FINISHED)
-        
-        if (mark === 'X') {
-            display.setTurnInfo(player1, false, player1)
-            return player1.name
-        } else if (mark === 'O') {
-            display.setTurnInfo(player2, false, player2)
-            return player2.name;
-        } else {
-            display.setTurnInfo(null, true, null)
-        }
-
-        return "No such player."
 
     }
-
-    const checkForTie = () => totalTurns === 9 && !result;
-
-    const checkWinner = (mark) => {
-        
-        let winner = null;
-        let leftDiagonalConsecutiveMarkCount = 0;
-        let rightDiagonalConsecutiveMarkCount = 0;
-
-        let size = board.getCols();
-        let grid = board.getGameboard();
-
-        for (let i = 0; i < 3; i++) {
-            let consecutiveRowMarkCount = 0;
-            let consecutiveColMarkCount = 0;
-
-            for (let j = 0; j < size; j++) {
-
-                if (grid[i * size + j] === mark) {
-                    consecutiveRowMarkCount++;
-                }
-                if (grid[j * size + i] === mark) {
-                    consecutiveColMarkCount++;
-                }
-
-                if (i === j && grid[i * size + j] === mark) {
-                    leftDiagonalConsecutiveMarkCount++
-                }
-                if (i === (size - 1) - j && grid[i * size + j] === mark) {
-                    rightDiagonalConsecutiveMarkCount++
-                }
-
-            }
-
-            if (consecutiveRowMarkCount === size
-                || consecutiveColMarkCount === size
-                || leftDiagonalConsecutiveMarkCount === size
-                || rightDiagonalConsecutiveMarkCount === size) {
-                winner = true;
-            }
-
-        }
-        console.log(totalTurns, !winner)
-        if (totalTurns === 9 && !winner) {
-            return determineWinner();
-        }
-
-        return winner ? determineWinner(mark, player1, player2) : null;
-    }
-
-    // UTILITY
-    const getIndexFromClick = (clickedCell)=>{
-        const coords = clickedCell.split('');
-        cellIndex = Number(coords[0]) * 3 + Number(coords[1])
-        return cellIndex;
-    }
-
-    const isEmptyCell = ()=>{
-        return board.getGameboard()[board.getActiveCell()] === '';
-    }
-
-    // GAME FLOW
-    const startGame = (e) => {
-
-        setPlayers(player1input.value, player2input.value);
-        
-        validatePlayers(player1.name, player2.name)
-
-        turn = player1;
-
-
-        playerForm.classList.add('inactive');
-        gameboard.classList.remove('inactive');
-
-        display.setGameInfo(player1, player2);
-        display.setTurnInfo(player1, null, null);
-
-        DisplayController.updateGameboardDisplay(document);
-        console.log(currentGameState)
-
-        e.preventDefault()
-    }
-
     return { listenForCellEvents, listenForGameEvents };
 }
 
