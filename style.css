@@ -159,4 +159,65 @@ button {
 
 .active-result-screen {
     display: flex;
+    z-index: 20;
+}
+
+.current-game-stats {
+    display: flex;
+    font-size: 64px;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+
+#player1-stats {
+    position: relative;
+}
+
+
+#player2-stats {
+    position: relative;
+}
+
+#player1-total-wins {
+    color: green;
+}
+
+#player2-total-wins {
+    color: red;
+}
+
+#player1-stat-container{
+    display: none;
+    grid-template-columns: 300px;
+    grid-template-rows: 1fr 1fr 1fr;
+    position: absolute;
+    margin-top: -200px;
+    border: 1px solid black;
+    border-radius: 4px;
+    padding: 10px;
+    text-align: left;
+    background-color: green;
+    color: white;
+    font-size: 24px;
+    gap: 5px;
+    line-height: 3rem;
+}
+
+#player2-stat-container{
+    display: none;
+    grid-template-columns: 300px;
+    grid-template-rows: 1fr 1fr 1fr;
+    position: absolute;
+    margin-top: -250px;
+    border: 1px solid black;
+    border-radius: 4px;
+    padding: 10px;
+    text-align: left;
+    background-color: red;
+    color: white;
+    font-size: 24px;
+    gap: 5px;
+    line-height: 3rem;
 }

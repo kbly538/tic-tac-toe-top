@@ -1,5 +1,5 @@
 function PlayerFactory(name, playerNo) {
-    return { name, playerNo, stats: {win: 0, lose: 0, tie: 0, badMoves: 0, fastestWin: 0} };
+    return { name, playerNo, stats: { win: 0, lose: 0, tie: 0, fastestWin: 0 }, currentGameStats: { turnCount: 0 } };
 }
 
 const Gameboard = (function (doc) {
@@ -28,7 +28,7 @@ const Gameboard = (function (doc) {
     }
 
     const resetGrid = () => {
-        for (let [index, cell] of _grid.entries()){
+        for (let [index, cell] of _grid.entries()) {
             updateGameboard(index, '');
         }
     };
@@ -37,13 +37,13 @@ const Gameboard = (function (doc) {
     const resetGameboard = () => {
         setActiveCell('');
         resetGrid();
-        
+
     }
 
     const removeAttachedEventListeners = () => {
 
         let gridCell = Array.from(gameboardContainer.childNodes).map(child => child)
-        gridCell.forEach(cell =>  {
+        gridCell.forEach(cell => {
             let newCell = cell.cloneNode(true);
             gameboardContainer.replaceChild(newCell, cell)
         })
@@ -79,6 +79,19 @@ const DisplayController = (function (doc) {
     const playerForm = document.getElementById('playerform');
     const gameboard = document.querySelector('.gameboardContainer');
     const player2Option = document.getElementById('option-player2')
+    const player1WinStats = document.getElementById('player1-total-wins');
+    const player2WinStats = document.getElementById('player2-total-wins');
+    const player1Stats = document.getElementById('player1-stats');
+    const player2Stats = document.getElementById('player2-stats');
+    const player1StatsContainer = document.getElementById('player1-stat-container');
+    const player2StatsContainer = document.getElementById('player2-stat-container');
+    const player1LosePara = document.getElementById('p1lose');
+    const player1TiePara = document.getElementById('p1tie');
+    const player1FastestPara = document.getElementById('p1fastest-win');
+    const player2LosePara = document.getElementById('p2lose');
+    const player2TiePara = document.getElementById('p2tie');
+    const player2FastestPara = document.getElementById('p2fastest-win');
+
 
 
     const updateGameboardDisplay = () => drawGameboard();
@@ -103,6 +116,18 @@ const DisplayController = (function (doc) {
         gameInfo.classList.remove('inactive');
         turnInfo.classList.remove('inactive');
     }
+
+    const displayPlayerStats = (player1, player2) => {
+        player1WinStats.textContent = `${player1.name}: ${player1.stats.win}`
+        player2WinStats.textContent = `${player2.name}: ${player2.stats.win}`
+        
+        player1LosePara.textContent = `Lost Games: ${player1.stats.lose}`
+        player1TiePara.textContent = `Ties: ${player1.stats.tie}`
+        player1FastestPara.textContent = `Fastest win: ${player1.stats.fastestWin} rounds`
+        
+        player2LosePara.textContent = `Lost Games: ${player2.stats.lose}`
+        player2TiePara.textContent = `Ties: ${player2.stats.tie}`
+        player2FastestPara.textContent = `Fastest win: ${player2.stats.fastestWin} rounds`}
 
     const setupGameDisplay = () => {
         playerForm.classList.add('inactive');
@@ -134,7 +159,7 @@ const DisplayController = (function (doc) {
 
     const toggleResultScreen = () => {
         let resultScreenClassList = Array.from(resultScreen.classList);
-        if (resultScreenClassList.includes("inactive-result-screen")){
+        if (resultScreenClassList.includes("inactive-result-screen")) {
             resultScreen.classList.remove('inactive-result-screen');
             resultScreen.classList.add('active-result-screen');
             return;
@@ -145,7 +170,12 @@ const DisplayController = (function (doc) {
     }
 
 
-    return { updateGameboardDisplay, setGameInfo, updateTurnDisplay, activateGameDetails, setupGameDisplay, updateResultDisplay, toggleResultScreen }
+    return { updateGameboardDisplay, setGameInfo, updateTurnDisplay, 
+        activateGameDetails, setupGameDisplay, updateResultDisplay, 
+        toggleResultScreen, displayPlayerStats, 
+        player1Stats, player2Stats, 
+        player1StatsContainer, player2StatsContainer,
+         }
 })(document);
 
 const GameEngine = (board, display) => {
@@ -171,18 +201,13 @@ const GameEngine = (board, display) => {
     let result = null;
     let againstAI = false;
 
-
     const resetGameStatus = () => {
         turn = player1;
         totalTurns = 0;
         currentGameState = gameState.FINISHED;
         result = null;
     }
-
-
     const setGameState = (state) => currentGameState = state;
-
-
     // INGAME EVENTS
     const processPlayerMove = (againstAI = false) => {
 
@@ -193,23 +218,26 @@ const GameEngine = (board, display) => {
         if (againstAI) {
             if (placeMark('X') === true) {
                 turn = player2;
+                updatePlayerStats(player1, "turn")
                 result = checkWinner('X');
                 if (!result) result = checkForTie();
                 if (!result && currentGameState === gameState.STARTED) {
                     result = aiMove();
                 }
-            }
+            } 
         } else {
             if (turn === player1 && placeMark('X') === true) {
                 turn = player2;
+                updatePlayerStats(player1, "turn")
                 result = checkWinner('X');
             } else if (turn === player2 && placeMark('O') === true) {
                 turn = player1;
+                updatePlayerStats(player2, "turn")
                 result = checkWinner('O');
             }
         }
 
-
+        display.displayPlayerStats(player1, player2);
         display.updateTurnDisplay(turn, null, null)
 
 
@@ -227,7 +255,7 @@ const GameEngine = (board, display) => {
         let cellIndex = board.getIndexFromClick(cell.id);
         board.setActiveCell(cellIndex)
 
-        if (!board.isEmptyCell()) return;
+        if (!board.isEmptyCell()){ return};
 
         processPlayerMove(againstAI);
     }
@@ -235,7 +263,9 @@ const GameEngine = (board, display) => {
         const activeCell = board.getActiveCell();
         const gameboard = board.getGameboard();
 
-        if (gameboard[activeCell] !== '') return false;
+        if (gameboard[activeCell] !== '') {
+            return false;
+        }
 
         board.updateGameboard(activeCell, mark);
 
@@ -247,7 +277,7 @@ const GameEngine = (board, display) => {
     // GAME FLOW
     const getPlayersFromInput = () => {
 
-        if (currentGameState ===  gameState.FINISHED) {
+        if (currentGameState === gameState.FINISHED) {
             setupGame();
             return;
         }
@@ -272,6 +302,7 @@ const GameEngine = (board, display) => {
     }
     const setupGame = () => {
         turn = player1;
+        display.displayPlayerStats(player1, player2);
         setGameState(gameState.STARTED);
 
     }
@@ -288,12 +319,16 @@ const GameEngine = (board, display) => {
         display.updateTurnDisplay(turn);
         display.activateGameDetails();
         DisplayController.updateGameboardDisplay(document);
-        
+
     }
 
-    const updatePlayerStats = (player) => {
-        player.stats.win++;
-        player.stats.fastestWin = player.stats.fastestWin < totalTurns ? player.stats.fastestWin : totalTurns;
+    const updatePlayerStats = (player, action) => {
+        if (action === "win") {
+            player.stats.win++;
+            player.stats.fastestWin = ((player.stats.fastestWin < player.currentGameStats.turnCount) && player.stats.fastestWin !== 0) ?  player.stats.fastestWin : player.currentGameStats.turnCount;
+        } 
+        else if (action === "tie")player.currentGameStats.tie++;
+        else if (action === "turn") player.currentGameStats.turnCount++;
     }
 
 
@@ -305,6 +340,8 @@ const GameEngine = (board, display) => {
 
         if (checkForTie() === true) {
             board.removeAttachedEventListeners()
+            updatePlayerStats(player1, 'tie');
+            updatePlayerStats(player2, 'tie');
             return true;
         };
 
@@ -342,7 +379,7 @@ const GameEngine = (board, display) => {
 
                 // return winner
                 winner = getPlayerFromMark(mark);
-                updatePlayerStats(winner);
+                updatePlayerStats(winner, 'win');
                 currentGameState = gameState.FINISHED;
                 return winner;
             }
@@ -355,15 +392,17 @@ const GameEngine = (board, display) => {
         return null;
     }
     const continueGameWithCurrentSettings = (e) => {
-        
+
 
         resetGameStatus();
         board.resetGameboard();
         display.toggleResultScreen();
+        player1.currentGameStats.turnCount = 0;
+        player2.currentGameStats.turnCount = 0;
         listenForCellEvents();
         startGame(e);
 
-        
+
     }
 
     // AI
@@ -380,9 +419,16 @@ const GameEngine = (board, display) => {
         const gameboard = board.getGameboard();
         
 
+        let emptyCellsForLookAhead = []
+        gameboard.forEach((cell, index)=>{
+            if (cell === "") emptyCellsForLookAhead.push(index);
+        })
+
+        console.log("empt cells", emptyCellsForLookAhead);
+
         while (gameboard[randomMove] !== '') {
             randomMove = Math.round(Math.random() * 8);
-            
+
         }
 
         totalTurns++;
@@ -405,7 +451,7 @@ const GameEngine = (board, display) => {
     const validatePlayers = (p1, p2) => p1.name !== "" && p2.name !== ""
 
     // EVENT LISTENERS
-    
+
     const listenForCellEvents = () => {
 
         // DETECT AND PROCESS CELL CLICKS
@@ -433,6 +479,23 @@ const GameEngine = (board, display) => {
         // RESULT SCREEN ACTIONS
         resultPlayAgainButton.addEventListener('click', continueGameWithCurrentSettings)
         resultRestartButton.addEventListener('click', () => location.reload())
+
+        display.player1Stats.addEventListener('mouseenter', ()=>{
+            display.player1StatsContainer.style.display = "grid";
+        })
+
+        display.player1Stats.addEventListener('mouseleave', ()=>{
+            display.player1StatsContainer.style.display = "none";
+        })
+        
+        
+        display.player2Stats.addEventListener('mouseenter', ()=>{
+            display.player2StatsContainer.style.display = "grid";
+        })
+
+        display.player2Stats.addEventListener('mouseleave', ()=>{
+            display.player2StatsContainer.style.display = "none";
+        })
 
 
 
