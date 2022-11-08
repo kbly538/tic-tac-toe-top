@@ -120,14 +120,15 @@ const DisplayController = (function (doc) {
     const displayPlayerStats = (player1, player2) => {
         player1WinStats.textContent = `${player1.name}: ${player1.stats.win}`
         player2WinStats.textContent = `${player2.name}: ${player2.stats.win}`
-        
+
         player1LosePara.textContent = `Lost Games: ${player1.stats.lose}`
         player1TiePara.textContent = `Ties: ${player1.stats.tie}`
         player1FastestPara.textContent = `Fastest win: ${player1.stats.fastestWin} rounds`
-        
+
         player2LosePara.textContent = `Lost Games: ${player2.stats.lose}`
         player2TiePara.textContent = `Ties: ${player2.stats.tie}`
-        player2FastestPara.textContent = `Fastest win: ${player2.stats.fastestWin} rounds`}
+        player2FastestPara.textContent = `Fastest win: ${player2.stats.fastestWin} rounds`
+    }
 
     const setupGameDisplay = () => {
         playerForm.classList.add('inactive');
@@ -146,15 +147,18 @@ const DisplayController = (function (doc) {
 
     }
 
-    const updateResultDisplay = (result) => result ? setResultScreen(result.name) : setResultScreen();
+    const updateResultDisplay = (result, winner) => {
+        console.log(winner, result)
+        if (result === 'tie') setResultScreen();
+        else if (winner) setResultScreen(winner);
+    }
 
 
     const setResultScreen = (winner) => {
-
         toggleResultScreen();
-
-        if (!winner) return resultText.textContent = `IT'S A TIE`.toUpperCase();
-        else resultText.textContent = `${winner} wins this round.`.toUpperCase();
+        if (!winner) resultText.textContent = `IT'S A TIE`.toUpperCase();
+        else resultText.textContent = `${winner.name} wins this round.`.toUpperCase()
+        return;
     }
 
     const toggleResultScreen = () => {
@@ -170,12 +174,13 @@ const DisplayController = (function (doc) {
     }
 
 
-    return { updateGameboardDisplay, setGameInfo, updateTurnDisplay, 
-        activateGameDetails, setupGameDisplay, updateResultDisplay, 
-        toggleResultScreen, displayPlayerStats, 
-        player1Stats, player2Stats, 
+    return {
+        updateGameboardDisplay, setGameInfo, updateTurnDisplay,
+        activateGameDetails, setupGameDisplay, updateResultDisplay,
+        toggleResultScreen, displayPlayerStats,
+        player1Stats, player2Stats,
         player1StatsContainer, player2StatsContainer,
-         }
+    }
 })(document);
 
 const GameEngine = (board, display) => {
@@ -200,17 +205,18 @@ const GameEngine = (board, display) => {
     let currentGameState = gameState.NOT_STARTED;
     let result = null;
     let againstAI = false;
+    let winner = null;
 
     const resetGameStatus = () => {
         turn = player1;
         totalTurns = 0;
         currentGameState = gameState.FINISHED;
         result = null;
+        winner = null;
     }
     const setGameState = (state) => currentGameState = state;
     // INGAME EVENTS
     const processPlayerMove = (againstAI = false) => {
-
         if (currentGameState === gameState.NOT_STARTED ||
             currentGameState === gameState.FINISHED) {
             return;
@@ -219,33 +225,37 @@ const GameEngine = (board, display) => {
             if (placeMark('X') === true) {
                 turn = player2;
                 updatePlayerStats(player1, "turn")
-                result = checkWinner('X');
-                if (!result) result = checkForTie();
-                if (!result && currentGameState === gameState.STARTED) {
+                result = checkWinner(board.getGameboard());
+                if (result === null && currentGameState === gameState.STARTED) {
                     result = aiMove();
                 }
-            } 
+            }
         } else {
             if (turn === player1 && placeMark('X') === true) {
                 turn = player2;
                 updatePlayerStats(player1, "turn")
-                result = checkWinner('X');
+                result = checkWinner(board.getGameboard());
             } else if (turn === player2 && placeMark('O') === true) {
                 turn = player1;
                 updatePlayerStats(player2, "turn")
-                result = checkWinner('O');
+                result = checkWinner(board.getGameboard());
             }
         }
 
         display.displayPlayerStats(player1, player2);
         display.updateTurnDisplay(turn, null, null)
 
+        if (!result) {
+            return;
+        }
 
-        if (gameFinished()) {
-            display.updateResultDisplay(result)
+        if (gameFinished() ) {
+
+            display.updateResultDisplay(result, winner)
             setGameState(gameState.FINISHED);
             return;
         }
+
 
     }
     const processCellClick = (e) => {
@@ -255,7 +265,7 @@ const GameEngine = (board, display) => {
         let cellIndex = board.getIndexFromClick(cell.id);
         board.setActiveCell(cellIndex)
 
-        if (!board.isEmptyCell()){ return};
+        if (!board.isEmptyCell()) { return };
 
         processPlayerMove(againstAI);
     }
@@ -325,20 +335,21 @@ const GameEngine = (board, display) => {
     const updatePlayerStats = (player, action) => {
         if (action === "win") {
             player.stats.win++;
-            player.stats.fastestWin = ((player.stats.fastestWin < player.currentGameStats.turnCount) && player.stats.fastestWin !== 0) ?  player.stats.fastestWin : player.currentGameStats.turnCount;
-        } 
-        else if (action === "tie")player.currentGameStats.tie++;
+            player.stats.fastestWin = ((player.stats.fastestWin < player.currentGameStats.turnCount) && player.stats.fastestWin !== 0) ? player.stats.fastestWin : player.currentGameStats.turnCount;
+        }
+        else if (action === "tie") player.currentGameStats.tie++;
         else if (action === "turn") player.currentGameStats.turnCount++;
     }
 
 
     const gameFinished = () => {
-        if (result) {
+
+        if (winner) {
             board.removeAttachedEventListeners()
             return true;
         }
 
-        if (checkForTie() === true) {
+        if (result === 'tie') {
             board.removeAttachedEventListeners()
             updatePlayerStats(player1, 'tie');
             updatePlayerStats(player2, 'tie');
@@ -348,16 +359,14 @@ const GameEngine = (board, display) => {
         return false;
     }
     const checkForTie = () => totalTurns === 9 && !result;
-    const checkWinner = (mark) => {
-
-        let winner = null;
+    const checkWinner = (b, minmax) => {
 
         // GET UP TO DATE BOARD STATUS
-        let size = board.getCols();
-        let grid = board.getGameboard();
+        let size = 3;
+        let grid = b;
 
 
-        // CHECK BOARD FOR WINNER 
+        // CHECK BOARD FOR X WINNER 
         let leftDiagonalConsecutiveMarkCount = 0;
         let rightDiagonalConsecutiveMarkCount = 0;
 
@@ -366,10 +375,10 @@ const GameEngine = (board, display) => {
             let consecutiveColMarkCount = 0;
 
             for (let j = 0; j < size; j++) {
-                if (grid[i * size + j] === mark) consecutiveRowMarkCount++;
-                if (grid[j * size + i] === mark) consecutiveColMarkCount++;
-                if (i === j && grid[i * size + j] === mark) leftDiagonalConsecutiveMarkCount++
-                if (i === (size - 1) - j && grid[i * size + j] === mark) rightDiagonalConsecutiveMarkCount++;
+                if (grid[i * size + j] === "X") consecutiveRowMarkCount++;
+                if (grid[j * size + i] === "X") consecutiveColMarkCount++;
+                if (i === j && grid[i * size + j] === "X") leftDiagonalConsecutiveMarkCount++
+                if (i === (size - 1) - j && grid[i * size + j] === "X") rightDiagonalConsecutiveMarkCount++;
             }
 
             if (consecutiveRowMarkCount === size
@@ -378,16 +387,48 @@ const GameEngine = (board, display) => {
                 || rightDiagonalConsecutiveMarkCount === size) {
 
                 // return winner
-                winner = getPlayerFromMark(mark);
-                updatePlayerStats(winner, 'win');
+                winner = getPlayerFromMark("X");
+                if (!minmax){
+                    updatePlayerStats(winner, 'win');
                 currentGameState = gameState.FINISHED;
-                return winner;
+                }
+                return "X";
             }
 
         }
 
-        // CHECK FOR TIE
-        if (totalTurns === 9 && !winner) return null;
+        // CHECK BOARD FOR O WINNER             
+        leftDiagonalConsecutiveMarkCount = 0;
+        rightDiagonalConsecutiveMarkCount = 0;
+
+        for (let i = 0; i < 3; i++) {
+            let consecutiveRowMarkCount = 0;
+            let consecutiveColMarkCount = 0;
+
+            for (let j = 0; j < size; j++) {
+                if (grid[i * size + j] === "O") consecutiveRowMarkCount++;
+                if (grid[j * size + i] === "O") consecutiveColMarkCount++;
+                if (i === j && grid[i * size + j] === "O") leftDiagonalConsecutiveMarkCount++
+                if (i === (size - 1) - j && grid[i * size + j] === "O") rightDiagonalConsecutiveMarkCount++;
+            }
+
+            if (consecutiveRowMarkCount === size
+                || consecutiveColMarkCount === size
+                || leftDiagonalConsecutiveMarkCount === size
+                || rightDiagonalConsecutiveMarkCount === size) {
+
+                // return winner
+                winner = getPlayerFromMark("O");
+                if (!minmax){
+                updatePlayerStats(winner, 'win');
+                currentGameState = gameState.FINISHED;
+                }
+                return "O";
+            }
+
+        }
+
+        if (isFull(b)) return 'tie'
 
         return null;
     }
@@ -405,8 +446,83 @@ const GameEngine = (board, display) => {
 
     }
 
+
+    let scores = {
+        X: 10,
+        O: -10,
+        tie: 0
+    }
+
+    const isFull = (arr) => {
+        for (let i of arr) {
+            if (i === "") return false;
+        }
+        return true
+    }
+
+    const minimax = (tempboard, depth, isMaximizing) => {
+
+        let tempResult = checkWinner(tempboard, true);
+        if (tempResult) {
+            return scores[tempResult];
+        }
+
+        if (isMaximizing) {
+            let bestScore = -Infinity;
+            for (let i = 0; i < 9; i++) {
+                if (tempboard[i] == '') {
+                    tempboard[i] = "X";
+                    let score = minimax(tempboard, depth + 1, false);
+                    tempboard[i] = "";
+                    bestScore = Math.max(score, bestScore)
+                }
+            }
+            return bestScore;
+        } else {
+
+            let bestScore = Infinity;
+            for (let i = 0; i < 9; i++) {
+                if (tempboard[i] == '') {
+                    tempboard[i] = "O";
+                    let score = minimax(tempboard, depth + 1, true);
+                    tempboard[i] = "";
+                    bestScore = Math.min(score, bestScore)
+                }
+            }
+
+            return bestScore;
+
+        }
+
+
+    }
+
     // AI
+
+    const bestMove = (currentBoard) => {
+
+
+        let bestScore = Infinity;
+        let move;
+
+
+        for (let i = 0; i < 9; i++) {
+            if (currentBoard[i] == '') {
+                currentBoard[i] = "O";
+                let score = minimax(currentBoard, 0, true);
+                currentBoard[i] = "";
+                if (bestScore > score) {
+                    bestScore = score;
+                    move = i;
+                }
+            }
+        }
+
+
+        return move;
+    }
     const aiMove = () => {
+
 
         display.updateTurnDisplay(turn);
 
@@ -415,34 +531,22 @@ const GameEngine = (board, display) => {
             return;
         }
 
-        let randomMove = Math.round(Math.random() * 8)
+        // Some kind of intelligence
         const gameboard = board.getGameboard();
-        
+        let move = bestMove(gameboard);
+        console.log("It looks like best move is ", move)
 
-        let emptyCellsForLookAhead = []
-        gameboard.forEach((cell, index)=>{
-            if (cell === "") emptyCellsForLookAhead.push(index);
-        })
-
-        console.log("empt cells", emptyCellsForLookAhead);
-
-        while (gameboard[randomMove] !== '') {
-            randomMove = Math.round(Math.random() * 8);
-
-        }
-
+        board.setActiveCell(move);
         totalTurns++;
 
-        board.setActiveCell(randomMove);
 
         board.updateGameboard(board.getActiveCell(), 'O');
 
         display.updateGameboardDisplay();
 
-        result = checkWinner('O')
+        result = checkWinner(board.getGameboard())
 
         turn = player1;
-
         return result;
     }
     // UTILITY
@@ -480,20 +584,20 @@ const GameEngine = (board, display) => {
         resultPlayAgainButton.addEventListener('click', continueGameWithCurrentSettings)
         resultRestartButton.addEventListener('click', () => location.reload())
 
-        display.player1Stats.addEventListener('mouseenter', ()=>{
+        display.player1Stats.addEventListener('mouseenter', () => {
             display.player1StatsContainer.style.display = "grid";
         })
 
-        display.player1Stats.addEventListener('mouseleave', ()=>{
+        display.player1Stats.addEventListener('mouseleave', () => {
             display.player1StatsContainer.style.display = "none";
         })
-        
-        
-        display.player2Stats.addEventListener('mouseenter', ()=>{
+
+
+        display.player2Stats.addEventListener('mouseenter', () => {
             display.player2StatsContainer.style.display = "grid";
         })
 
-        display.player2Stats.addEventListener('mouseleave', ()=>{
+        display.player2Stats.addEventListener('mouseleave', () => {
             display.player2StatsContainer.style.display = "none";
         })
 
@@ -506,5 +610,3 @@ const GameEngine = (board, display) => {
 const game = GameEngine(Gameboard, DisplayController);
 game.listenForCellEvents();
 game.listenForGameEvents();
-
-
