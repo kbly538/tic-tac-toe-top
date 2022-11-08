@@ -148,7 +148,6 @@ const DisplayController = (function (doc) {
     }
 
     const updateResultDisplay = (result, winner) => {
-        console.log(winner, result)
         if (result === 'tie') setResultScreen();
         else if (winner) setResultScreen(winner);
     }
@@ -221,6 +220,7 @@ const GameEngine = (board, display) => {
             currentGameState === gameState.FINISHED) {
             return;
         }
+        // TODO: LOTS OF REPETITION! TRY A DRYER APPROACH
         if (againstAI) {
             if (placeMark('X') === true) {
                 turn = player2;
@@ -243,20 +243,16 @@ const GameEngine = (board, display) => {
         }
 
         display.displayPlayerStats(player1, player2);
-        display.updateTurnDisplay(turn, null, null)
+        display.updateTurnDisplay(turn, null, null) // TODO: WHAT ARE THESE NULLS?
 
-        if (!result) {
-            return;
-        }
+        if (!result) return;
 
-        if (gameFinished() ) {
-
+        if (gameFinished()) {
+            
             display.updateResultDisplay(result, winner)
             setGameState(gameState.FINISHED);
-            return;
+        
         }
-
-
     }
     const processCellClick = (e) => {
 
@@ -265,7 +261,7 @@ const GameEngine = (board, display) => {
         let cellIndex = board.getIndexFromClick(cell.id);
         board.setActiveCell(cellIndex)
 
-        if (!board.isEmptyCell()) { return };
+        if (!board.isEmptyCell()) return;
 
         processPlayerMove(againstAI);
     }
@@ -273,12 +269,9 @@ const GameEngine = (board, display) => {
         const activeCell = board.getActiveCell();
         const gameboard = board.getGameboard();
 
-        if (gameboard[activeCell] !== '') {
-            return false;
-        }
+        if (gameboard[activeCell] !== '') return false;
 
         board.updateGameboard(activeCell, mark);
-
         display.updateGameboardDisplay();
 
         totalTurns++;
@@ -333,22 +326,24 @@ const GameEngine = (board, display) => {
     }
 
     const updatePlayerStats = (player, action) => {
+        // TODO: FIX ISSUE OF NOT BEING DISPLAYED 
+        console.log(player, action)
         if (action === "win") {
             player.stats.win++;
-            player.stats.fastestWin = ((player.stats.fastestWin < player.currentGameStats.turnCount) && player.stats.fastestWin !== 0) ? player.stats.fastestWin : player.currentGameStats.turnCount;
+            player.stats.fastestWin = ((player.stats.fastestWin < player.currentGameStats.turnCount) 
+                                     && player.stats.fastestWin !== 0) 
+                                     ? player.stats.fastestWin 
+                                     : player.currentGameStats.turnCount;
         }
-        else if (action === "tie") player.currentGameStats.tie++;
+        else if (action === "tie") player.stats.tie++;
         else if (action === "turn") player.currentGameStats.turnCount++;
+        else if (action === "lose") player.stats.lose++;
     }
 
 
     const gameFinished = () => {
 
-        if (winner) {
-            board.removeAttachedEventListeners()
-            return true;
-        }
-
+        
         if (result === 'tie') {
             board.removeAttachedEventListeners()
             updatePlayerStats(player1, 'tie');
@@ -356,17 +351,24 @@ const GameEngine = (board, display) => {
             return true;
         };
 
+        if (winner) {
+            // TODO: MOVE UPDATING PLAYER STATS PORTION IN winnerCheck() here
+            board.removeAttachedEventListeners()
+            return true;
+        }
+        
+        
         return false;
     }
-    const checkForTie = () => totalTurns === 9 && !result;
-    const checkWinner = (b, minmax) => {
+    const checkWinner = (board, shouldUpdatePlayerStats = true) => {
 
         // GET UP TO DATE BOARD STATUS
         let size = 3;
-        let grid = b;
+        let grid = board;
 
 
         // CHECK BOARD FOR X WINNER 
+        // TODO: GET RID OF REPETITION
         let leftDiagonalConsecutiveMarkCount = 0;
         let rightDiagonalConsecutiveMarkCount = 0;
 
@@ -388,9 +390,10 @@ const GameEngine = (board, display) => {
 
                 // return winner
                 winner = getPlayerFromMark("X");
-                if (!minmax){
+                if (shouldUpdatePlayerStats) {
                     updatePlayerStats(winner, 'win');
-                currentGameState = gameState.FINISHED;
+                    updatePlayerStats(player2, 'lose');
+                    currentGameState = gameState.FINISHED;
                 }
                 return "X";
             }
@@ -419,16 +422,17 @@ const GameEngine = (board, display) => {
 
                 // return winner
                 winner = getPlayerFromMark("O");
-                if (!minmax){
-                updatePlayerStats(winner, 'win');
-                currentGameState = gameState.FINISHED;
+                if (shouldUpdatePlayerStats) {
+                    updatePlayerStats(winner, 'win');
+                    updatePlayerStats(player1, 'lose');
+                    currentGameState = gameState.FINISHED;
                 }
                 return "O";
             }
 
         }
 
-        if (isFull(b)) return 'tie'
+        if (noRoomOnBoard(board)) return 'tie'
 
         return null;
     }
@@ -453,7 +457,7 @@ const GameEngine = (board, display) => {
         tie: 0
     }
 
-    const isFull = (arr) => {
+    const noRoomOnBoard = (arr) => {
         for (let i of arr) {
             if (i === "") return false;
         }
@@ -462,7 +466,8 @@ const GameEngine = (board, display) => {
 
     const minimax = (tempboard, depth, isMaximizing) => {
 
-        let tempResult = checkWinner(tempboard, true);
+        let shouldUpdatePlayerStats = false;
+        let tempResult = checkWinner(tempboard, shouldUpdatePlayerStats);
         if (tempResult) {
             return scores[tempResult];
         }
@@ -497,14 +502,11 @@ const GameEngine = (board, display) => {
 
     }
 
-    // AI
-
     const bestMove = (currentBoard) => {
 
 
         let bestScore = Infinity;
         let move;
-
 
         for (let i = 0; i < 9; i++) {
             if (currentBoard[i] == '') {
@@ -518,35 +520,26 @@ const GameEngine = (board, display) => {
             }
         }
 
-
         return move;
     }
     const aiMove = () => {
 
-
         display.updateTurnDisplay(turn);
-
-        if (currentGameState === gameState.NOT_STARTED ||
-            currentGameState === gameState.FINISHED) {
-            return;
-        }
-
-        // Some kind of intelligence
+        let gameRunning = (currentGameState !== gameState.NOT_STARTED && currentGameState !== gameState.FINISHED);
+        if (gameRunning === false) return;
+        
         const gameboard = board.getGameboard();
         let move = bestMove(gameboard);
-        console.log("It looks like best move is ", move)
-
         board.setActiveCell(move);
         totalTurns++;
-
-
+        
         board.updateGameboard(board.getActiveCell(), 'O');
-
         display.updateGameboardDisplay();
-
+        
         result = checkWinner(board.getGameboard())
 
         turn = player1;
+
         return result;
     }
     // UTILITY
@@ -555,10 +548,9 @@ const GameEngine = (board, display) => {
     const validatePlayers = (p1, p2) => p1.name !== "" && p2.name !== ""
 
     // EVENT LISTENERS
-
     const listenForCellEvents = () => {
 
-        // DETECT AND PROCESS CELL CLICKS
+        // EVENT LISTENERS: DETECT AND PROCESS CELL CLICKS
         Array.from(cells).forEach(cell => {
             cell.addEventListener('click', processCellClick, false)
         })
@@ -566,12 +558,12 @@ const GameEngine = (board, display) => {
     const listenForGameEvents = () => {
 
 
-        // START GAME
+        // EVENT LISTENERS: START GAME
         startGameButton.addEventListener('click', startGame);
 
 
 
-        // OPPONENT SELECTION
+        // EVENT LISTENERS: OPPONENT SELECTION
         player2Option.addEventListener('change', () => {
 
             if (player2Option.value === "human") return player2label.style.display = "flex";
@@ -580,7 +572,7 @@ const GameEngine = (board, display) => {
 
         })
 
-        // RESULT SCREEN ACTIONS
+        // EVENT LISTENERS: RESULT SCREEN ACTIONS
         resultPlayAgainButton.addEventListener('click', continueGameWithCurrentSettings)
         resultRestartButton.addEventListener('click', () => location.reload())
 
@@ -610,3 +602,14 @@ const GameEngine = (board, display) => {
 const game = GameEngine(Gameboard, DisplayController);
 game.listenForCellEvents();
 game.listenForGameEvents();
+
+
+
+// TODO: MOVE TO DISPLAY CONTROLLER MODULE
+let resScreen = document.querySelector('.result-screen')
+document.addEventListener('keypress', (e) => {
+    if (e.key === "k") {
+        DisplayController.toggleResultScreen();
+
+    }
+})

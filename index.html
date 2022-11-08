@@ -19,23 +19,20 @@
                 <button id="play-again-btn">Play Again</button>
                 <button id="restart-game-btn">Restart Game</button>
             </div>
-            <button id="viewBoard">View Board</button>
             
         </div>
         <div class="gameContainer">
             <h1 id="title">TIC TAC TOE</h1>
             <select id="option-player2">
                 <option value="human">Human 🧑</option>
-                <option value="ai">Computer 🤖</option>
+                <option value="ai">CPU 🤖</option>
             </select>
             <form action="" class="playerform" id="playerform">
                 VS
-                <label id="lbl-player1" for="player1"> Player 1:
-                    <input type="text" name="player1" id="player1" placeholder="Enter name" value="Hilal" maxlength="15"
+                <label id="lbl-player1" for="player1">Player 1:&nbsp;<input type="text" name="player1" id="player1" placeholder="Enter name" value="" maxlength="15"
                         required>
                 </label>
-                <label id="lbl-player2" for="player2"> Player 2:
-                    <input type="text" name="player2" id="player2" placeholder="Enter name" maxlength="15">
+                <label id="lbl-player2" for="player2">Player 2:&nbsp;<input type="text" name="player2" id="player2" placeholder="Enter name" maxlength="15">
                 </label>
 
                 <button id="formsubmit">Start Game</button>
@@ -60,7 +57,7 @@
             </div>
 
             <div class="current-game-stats">
-                <div id="player1-stats">
+                <div id="player1-stats">    
                     <div id="player1-stat-container">
                         <p id="p1lose"></p>
                             <p id="p1tie"></p>
@@ -79,7 +76,7 @@
             </div>
         </div>
 
-
+        <p class="settings-tip">Press 'k' for the menu.</p>
     </div>
 </body>
 

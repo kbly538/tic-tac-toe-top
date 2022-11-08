@@ -22,16 +22,16 @@
 .gameboardContainer {
     
     display: grid;
-    grid-template-columns: repeat(3, 200px);
-    grid-template-rows: repeat(3, 200px);
+    grid-template-columns: repeat(3, 150px);
+    grid-template-rows: repeat(3, 150px);
     justify-content: center;
     align-items: center;
 }
 
 
 .gameboardContainer div {
-    width: 200px;
-    height: 200px;
+    width: 150px;
+    height: 150px;
     border-right: 1px solid black;
     border-bottom: 1px solid black;
     display: flex;
@@ -54,11 +54,11 @@
     flex-direction: column;
     gap: 34px;
     align-items: center;
-    font-size: 64px;
+    font-size: 32px;
 }
 
 #option-player2{
-    font-size: 64px;
+    font-size: 32px;
 }
 
 select {
@@ -83,7 +83,7 @@ select {
 
 #turn-info {
     height: 20px;
-    font-size: 2rem;
+    font-size: 1rem;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -95,12 +95,12 @@ select {
 }
 
 input {
-    font-size: 64px;
+    font-size: 32px;
     border-radius: 5px;
 }
 
 button {
-    font-size: 64px;
+    font-size: 32px;
 }
 
 #title {
@@ -109,7 +109,7 @@ button {
 }
 
 #turn-info {
-    font-size: 64px;
+    font-size: 32px;
 }
 
 .result-screen {
@@ -164,7 +164,7 @@ button {
 
 .current-game-stats {
     display: flex;
-    font-size: 64px;
+    font-size: 32px;
     gap: 10px;
     align-items: center;
     justify-content: space-between;
@@ -220,4 +220,10 @@ button {
     font-size: 24px;
     gap: 5px;
     line-height: 3rem;
+}
+
+.settings-tip{
+    position: fixed;
+    bottom: 0%;
+    padding: 30px;
 }
